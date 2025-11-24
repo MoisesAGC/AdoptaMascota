@@ -2,8 +2,11 @@ from django.contrib.auth import authenticate, login
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.contrib.auth.models import User
+from rest_framework.parsers import MultiPartParser, FormParser 
+
 
 from .serializers import MascotaSerializer, UserSerializer, UserRegistrationSerializer
 from .models import Mascota
@@ -12,10 +15,15 @@ from .models import Mascota
 class MascotaViewSet(viewsets.ModelViewSet):
     queryset = Mascota.objects.all()
     serializer_class = MascotaSerializer
-    
+    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [AllowAny]
     def perform_create(self, serializer):
-        serializer.save(publicador=self.request.user)
-
+        user = self.request.user
+        if user.is_authenticated:
+            publicador = user
+        else:
+            publicador = User.objects.last()  #pendiende cambiar esto por el usuario definido"
+        serializer.save(publicador=publicador)
 
 # Vistas de Autenticación
 

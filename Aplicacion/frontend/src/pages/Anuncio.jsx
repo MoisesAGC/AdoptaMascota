@@ -45,21 +45,92 @@ export default function Anuncio() {
     };
 
     /**
-     * Manejador de envío del formulario. Simula la subida de datos.
+     * Manejador de envío del formulario
      */
-    const handleSubmit = async (e) => {
+     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
 
-        console.log("Datos de la nueva mascota:", formData);
+        try {
+            //  Función para leer cookies (csrf)
+            const getCookie = (name) => {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            };
 
-        // --- Simulación de envío de datos al backend (retraso de 2s) ---
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setIsLoading(false);
-        alert("Mascota registrada exitosamente (simulación)");
-        
-        // 2. Redirección al Muro de Mascotas después del éxito
-        navigate('/muro');
+            //  Asegurarnos de tener csrftoken
+            let csrftoken = getCookie("csrftoken");
+            if (!csrftoken) {
+                // Petición
+                await fetch("http://127.0.0.1:8000/api/auth/csrf/", {
+                    method: "GET",
+                    credentials: "include",
+                });
+                csrftoken = getCookie("csrftoken");
+            }
+
+            //  Construir FormData con los campos que el backend espera
+            const data = new FormData();
+                data.append("nombre", formData.nombre);
+                data.append("edad", formData.edad);
+                data.append("descripcion", formData.descripcion);
+                data.append("vacunado", formData.vacunado ? "true" : "false");
+                data.append("sexo", formData.sexo);
+                data.append("ubicacion", formData.ubicacion);
+
+                if (formData.imagen) {
+                    data.append("imagen", formData.imagen);
+                }
+
+
+            
+            const especieTexto = formData.especie.trim().toLowerCase();
+            let especieId;
+            if (especieTexto === "perro") especieId = 2;
+            else if (especieTexto === "gato") especieId = 3;
+            else if (especieTexto === "hamster" || especieTexto === "hámster") especieId = 1;
+
+            data.append("especie", especieId);
+
+
+            // Enviar POST al backend
+            const response = await fetch("http://127.0.0.1:8000/api/mascotas/", {
+                method: "POST",
+                body: data,
+                credentials: "include",     
+                headers: {
+                    "X-CSRFToken": csrftoken || "",
+                },
+            });
+
+            if (!response.ok) {
+                let errorText = "Error al registrar la mascota";
+                try {
+                    const errorData = await response.json();
+                    console.error("Error backend:", errorData);
+                    if (typeof errorData === "object") {
+                        errorText = JSON.stringify(errorData, null, 2);
+                    }
+                } catch (_) {
+                    
+                }
+                alert(errorText);
+                setIsLoading(false);
+                return;
+            }
+
+            const mascotaCreada = await response.json();
+            console.log("Mascota creada:", mascotaCreada);
+
+            alert("Mascota publicada con éxito");
+            navigate("/muro");
+        } catch (err) {
+            console.error("Error en el envío:", err);
+            alert("Error de conexión con el servidor");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

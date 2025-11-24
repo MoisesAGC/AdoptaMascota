@@ -18,6 +18,16 @@ class Mascota(models.Model):
     
     especie = models.ForeignKey(Especie, on_delete=models.CASCADE)
     publicador = models.ForeignKey(User, on_delete=models.CASCADE)
+    sexo = models.CharField(
+        max_length=10,
+        choices=[('macho', 'Macho'), ('hembra', 'Hembra')],
+        default='macho',          
+    )
+    ubicacion = models.CharField(
+        max_length=100,
+        default='Sin especificar',  
+        blank=True,
+    )
     
     def __str__(self):
         return self.nombre
@@ -28,5 +38,5 @@ class PerfilUsuario(models.Model):
     avatar = models.ImageField(upload_to='perfiles/', null=True, blank=True)
         
     def __str__(self):
-        return self.nombre.username
+        return self.user.username
     
